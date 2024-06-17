@@ -29,3 +29,10 @@ RUN ln -sf /usr/bin/chromium-browser /usr/bin/chromium
 
 # Copy the .puppeteer.json file to the appropriate location
 COPY .puppeteer.json /root/.puppeteer.json
+
+# Copy the entrypoint script and set the appropriate permissions
+COPY entrypoint.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
+
+# Set the entrypoint to the entrypoint script
+ENTRYPOINT ["/root/entrypoint.sh"]
