@@ -2,7 +2,7 @@ FROM pandoc/latex
 
 # Update TeX Live and install required LaTeX packages
 RUN tlmgr update --self && \
-    tlmgr install enumitem
+    tlmgr install enumitem polyglossia fontspec
 
 # Install Node.js and npm using apk
 RUN apk update && \
