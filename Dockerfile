@@ -2,13 +2,13 @@ FROM pandoc/latex
 
 # Update TeX Live and install required LaTeX packages
 RUN tlmgr update --self && \
-    tlmgr install enumitem polyglossia fontspec
+    tlmgr install enumitem 
 
 # Install Node.js and npm using apk
 RUN apk update && \
     apk add --no-cache nodejs npm
 
-# Install Chromium and its dependencies
+# Install Chromium and its dependencies (without ttf-amiri)
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -16,6 +16,17 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont
+
+# Manually install Amiri font
+RUN mkdir -p /usr/share/fonts/truetype/amiri && \
+    wget -O /tmp/amiri.zip https://github.com/alif-type/amiri/releases/download/0.117/amiri-0.117.zip && \
+    unzip /tmp/amiri.zip -d /tmp/amiri && \
+    cp /tmp/amiri/Amiri-0.117/Amiri-Regular.ttf /usr/share/fonts/truetype/amiri/ && \
+    cp /tmp/amiri/Amiri-0.117/Amiri-Bold.ttf /usr/share/fonts/truetype/amiri/ && \
+    cp /tmp/amiri/Amiri-0.117/Amiri-Slanted.ttf /usr/share/fonts/truetype/amiri/ && \
+    cp /tmp/amiri/Amiri-0.117/Amiri-BoldSlanted.ttf /usr/share/fonts/truetype/amiri/ && \
+    fc-cache -fv && \
+    rm -rf /tmp/amiri /tmp/amiri.zip
 
 # Install mermaid-filter globally
 RUN npm install --global mermaid-filter
