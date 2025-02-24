@@ -2,14 +2,22 @@ FROM pandoc/latex
 
 # Update TeX Live and install required LaTeX packages
 RUN tlmgr update --self && \
-    tlmgr install enumitem 
+    tlmgr install enumitem
 
-# Install Node.js and npm using apk
-RUN apk update && \
-    apk add --no-cache nodejs npm
-
-# Install Chromium and its dependencies (without ttf-amiri)
-RUN apk add --no-cache \
+# Install all necessary packages in one layer:
+# - Node.js and npm (with required SQLite libraries)
+# - Utilities: wget, unzip, fontconfig
+# - SQLite development files (to resolve Node relocation issues)
+# - Chromium and its dependencies
+RUN apk update && apk add --no-cache \
+    nodejs \
+    npm \
+    wget \
+    unzip \
+    fontconfig \
+    sqlite \
+    sqlite-libs \
+    sqlite-dev \
     chromium \
     nss \
     freetype \
@@ -17,7 +25,7 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont
 
-# Manually install Amiri font
+# Manually install Amiri font and update font cache
 RUN mkdir -p /usr/share/fonts/truetype/amiri && \
     wget -O /tmp/amiri.zip https://github.com/alif-type/amiri/releases/download/0.117/amiri-0.117.zip && \
     unzip /tmp/amiri.zip -d /tmp/amiri && \
@@ -28,22 +36,20 @@ RUN mkdir -p /usr/share/fonts/truetype/amiri && \
     fc-cache -fv && \
     rm -rf /tmp/amiri /tmp/amiri.zip
 
-# Install mermaid-filter globally
+# Install mermaid-filter globally via npm
 RUN npm install --global mermaid-filter
 
-# Set Puppeteer to use installed Chromium and pass --no-sandbox flag
+# Configure Puppeteer to use the installed Chromium binary.
+# Chromium on Alpine is at /usr/bin/chromium so we create a symlink for Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Create a symlink for Puppeteer to find the Chromium binary
-RUN ln -sf /usr/bin/chromium-browser /usr/bin/chromium
+RUN ln -sf /usr/bin/chromium /usr/bin/chromium-browser
 
-# Copy the .puppeteer.json file to the appropriate location
+# Copy configuration and entrypoint script
 COPY .puppeteer.json /root/.puppeteer.json
-
-# Copy the entrypoint script and set the appropriate permissions
 COPY entrypoint.sh /root/entrypoint.sh
 RUN chmod +x /root/entrypoint.sh
 
-# Set the entrypoint to the entrypoint script
+# Set the entrypoint to the script
 ENTRYPOINT ["/root/entrypoint.sh"]
