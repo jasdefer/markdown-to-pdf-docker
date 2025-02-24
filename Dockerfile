@@ -1,55 +1,69 @@
-FROM pandoc/latex
+# Use an official Python slim image as a base.
+FROM python:3.9-slim
 
-# Update TeX Live and install required LaTeX packages
-RUN tlmgr update --self && \
-    tlmgr install enumitem
+# Install OS-level dependencies (excluding Pandoc, which will be installed separately).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        nodejs \
+        npm \
+        chromium \
+        texlive-xetex \
+        texlive-fonts-recommended \
+        texlive-fonts-extra \
+        texlive-latex-recommended \
+        texlive-lang-arabic \
+        lmodern \
+        libglib2.0-0 \
+        libnss3 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libx11-xcb1 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgbm1 \
+        libxfixes3 \
+        libxkbcommon0 \
+        libasound2 \
+        ca-certificates \
+        fonts-liberation \
+        fonts-dejavu-core \
+        librsvg2-bin \
+        wget \
+        unzip && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install all necessary packages in one layer:
-# - Node.js and npm (with required SQLite libraries)
-# - Utilities: wget, unzip, fontconfig
-# - SQLite development files (to resolve Node relocation issues)
-# - Chromium and its dependencies
-RUN apk update && apk add --no-cache \
-    nodejs \
-    npm \
-    wget \
-    unzip \
-    fontconfig \
-    sqlite \
-    sqlite-libs \
-    sqlite-dev \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+# Install the latest Pandoc version from the official releases.
+RUN wget -O /tmp/pandoc.deb $(wget -qO- https://api.github.com/repos/jgm/pandoc/releases/latest | \
+    grep "browser_download_url.*amd64.deb" | cut -d '"' -f 4) && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gdebi-core && \
+    gdebi -n /tmp/pandoc.deb && \
+    rm -f /tmp/pandoc.deb && \
+    pandoc --version
 
-# Manually install Amiri font and update font cache
-RUN mkdir -p /usr/share/fonts/truetype/amiri && \
-    wget -O /tmp/amiri.zip https://github.com/alif-type/amiri/releases/download/0.117/amiri-0.117.zip && \
-    unzip /tmp/amiri.zip -d /tmp/amiri && \
-    cp /tmp/amiri/Amiri-0.117/Amiri-Regular.ttf /usr/share/fonts/truetype/amiri/ && \
-    cp /tmp/amiri/Amiri-0.117/Amiri-Bold.ttf /usr/share/fonts/truetype/amiri/ && \
-    cp /tmp/amiri/Amiri-0.117/Amiri-Slanted.ttf /usr/share/fonts/truetype/amiri/ && \
-    cp /tmp/amiri/Amiri-0.117/Amiri-BoldSlanted.ttf /usr/share/fonts/truetype/amiri/ && \
+# Install Amiri fonts manually since the fonts-amiri package is not available.
+RUN wget -O /tmp/amiri.zip https://github.com/alif-type/amiri/releases/download/0.115/amiri-0.115.zip && \
+    mkdir -p /usr/local/share/fonts/amiri && \
+    unzip /tmp/amiri.zip -d /usr/local/share/fonts/amiri && \
     fc-cache -fv && \
-    rm -rf /tmp/amiri /tmp/amiri.zip
+    rm -f /tmp/amiri.zip
 
-# Install mermaid-filter globally via npm
-RUN npm install --global mermaid-filter
+# Install the Mermaid CLI globally via npm.
+RUN npm install -g @mermaid-js/mermaid-cli
 
-# Configure Puppeteer to use the installed Chromium binary.
-# Chromium on Alpine is at /usr/bin/chromium so we create a symlink for Puppeteer
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# Install Python dependencies.
+RUN pip install --no-cache-dir pyyaml
 
-RUN ln -sf /usr/bin/chromium /usr/bin/chromium-browser
+# Tell Puppeteer/Chromium to use the correct executable path.
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Copy configuration and entrypoint script
-COPY .puppeteer.json /root/.puppeteer.json
-COPY entrypoint.sh /root/entrypoint.sh
-RUN chmod +x /root/entrypoint.sh
+# Create a non-root user (appuser) and set the home directory.
+RUN useradd --create-home --shell /bin/bash appuser
 
-# Set the entrypoint to the script
-ENTRYPOINT ["/root/entrypoint.sh"]
+# Set the working directory and change ownership to the non-root user.
+WORKDIR /app
+RUN chown -R appuser:appuser /app
+
+# Switch to the non-root user.
+USER appuser
