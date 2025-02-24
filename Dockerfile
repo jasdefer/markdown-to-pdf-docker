@@ -58,11 +58,14 @@ RUN pip install --no-cache-dir pyyaml
 # Tell Puppeteer/Chromium to use the correct executable path.
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Create a non-root user (appuser) and set the home directory.
-RUN useradd --create-home --shell /bin/bash -u 1001 appuser
+# Create a dedicated user for Chromium sandboxing.
+# This user is created at build time (with root privileges) so that it’s available in the final image.
+RUN groupadd -r chromium && useradd -r -g chromium chromium-sandbox
 
+# Create the regular non-root user (appuser).
+RUN useradd --create-home --shell /bin/bash appuser
 
-# Set the working directory and change ownership to the non-root user.
+# Set the working directory and adjust ownership so that appuser can write.
 WORKDIR /app
 RUN chown -R appuser:appuser /app
 
