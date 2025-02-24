@@ -59,7 +59,8 @@ RUN pip install --no-cache-dir pyyaml
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Create a non-root user (appuser) and set the home directory.
-RUN useradd --create-home --shell /bin/bash appuser
+RUN useradd --create-home --shell /bin/bash -u 1001 appuser
+
 
 # Set the working directory and change ownership to the non-root user.
 WORKDIR /app
