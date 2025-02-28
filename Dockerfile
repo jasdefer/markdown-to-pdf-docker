@@ -62,12 +62,12 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # **Fix Chromium sandbox permissions**
 RUN chmod 4755 /usr/lib/chromium/chrome-sandbox
 
-# Create a non-root user (appuser) and set the home directory.
-RUN useradd --create-home --shell /bin/bash appuser
+# Create a non-root user (vsts) with UID 1001 and set the home directory.
+RUN useradd --create-home --uid 1001 --shell /bin/bash vsts
 
 # Set the working directory and change ownership.
 WORKDIR /app
-RUN chown -R appuser:appuser /app
+RUN chown -R vsts:vsts /app
 
 # Switch to the non-root user.
-USER appuser
+USER vsts
