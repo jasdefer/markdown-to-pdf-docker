@@ -7,6 +7,7 @@ RUN apt-get update && \
         nodejs \
         npm \
         chromium \
+        chromium-sandbox \
         texlive-xetex \
         texlive-fonts-recommended \
         texlive-fonts-extra \
@@ -64,7 +65,7 @@ RUN chmod 4755 /usr/lib/chromium/chrome-sandbox
 # Create a non-root user (appuser) and set the home directory.
 RUN useradd --create-home --shell /bin/bash appuser
 
-# Set the working directory and change ownership to the non-root user.
+# Set the working directory and change ownership.
 WORKDIR /app
 RUN chown -R appuser:appuser /app
 
